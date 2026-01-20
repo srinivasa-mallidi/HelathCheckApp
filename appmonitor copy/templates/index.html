@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Application Health Monitor</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <style>
+        body {
+            font-family: system-ui;
+            background: #0b1220;
+            color: #e5e7eb;
+            padding: 40px;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            max-width: 900px;
+            border-collapse: collapse;
+            background: #020617;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        th, td {
+            padding: 14px 16px;
+            text-align: left;
+        }
+
+        th {
+            background: #020617;
+            color: #94a3b8;
+            font-size: 13px;
+            text-transform: uppercase;
+            border-bottom: 1px solid #1e293b;
+        }
+
+        tr {
+            border-bottom: 1px solid #1e293b;
+        }
+
+        tr:last-child {
+            border-bottom: none;
+        }
+
+        .status {
+            font-weight: 600;
+        }
+
+        .success { color: #22c55e; }
+        .failure { color: #ef4444; }
+        .checking { color: #38bdf8; }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 3px solid #1e293b;
+            border-top: 3px solid #38bdf8;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>Application Service Health</h1>
+
+<table>
+    <thead>
+        <tr>
+            <th>Service</th>
+            <th>Endpoint</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+
+   <tbody id="services">
+    {% for service in services %}
+    <tr id="row-{{ loop.index0 }}"
+        class="{% if not loop.first %}hidden{% endif %}">
+        <td>{{ service.name }}</td>
+        <td>{{ service.url }}</td>
+        <td class="status checking">
+            {% if loop.first %}
+            <span class="spinner"></span> Checking...
+            {% else %}
+            —
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+
+    <!-- start first check -->
+    <div hx-get="/check/0"
+        hx-trigger="load"
+        hx-swap="none">
+    </div>
+
+</table>
+
+<script>
+    let currentIndex = 0;
+    const total = {{ services|length }};
+
+    document.body.addEventListener("htmx:afterRequest", function () {
+        currentIndex++;
+
+        if (currentIndex < total) {
+            document.getElementById("checker")
+                .setAttribute("hx-get", `/check/${currentIndex}`);
+            htmx.trigger("#checker", "check");
+        }
+    });
+</script>
+
+<div id="checker"
+     hx-get="/check/0"
+     hx-trigger="load, check"
+     hx-swap="none">
+</div>
+
+</body>
+</html>

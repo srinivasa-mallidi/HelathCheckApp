@@ -1,0 +1,17 @@
+<ul>
+    {% for item in services %}
+        <li>
+            <strong>{{ item.service.name }}</strong>
+            —
+            <span class="{{ item.status }}">
+                {{ item.status }}
+            </span>
+            <br>
+            <small>{{ item.service.url }}</small>
+        </li>
+    {% endfor %}
+</ul>
+
+<p>
+    <small>Auto-refreshing every 10 seconds...</small>
+</p>

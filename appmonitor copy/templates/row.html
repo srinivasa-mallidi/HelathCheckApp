@@ -1,0 +1,18 @@
+<tr id="row-{{ idx }}" hx-swap-oob="true">
+    <td>{{ service.name }}</td>
+    <td>{{ service.url }}</td>
+    <td class="status {% if ok %}success{% else %}failure{% endif %}">
+        {% if ok %}
+            ✔ {{ message }}
+        {% else %}
+            ✖ {{ message }}
+        {% endif %}
+    </td>
+</tr>
+
+{% if next_idx is not none %}
+<div hx-get="/check/{{ next_idx }}"
+     hx-trigger="load delay:1s"
+     hx-swap="none">
+</div>
+{% endif %}
