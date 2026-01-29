@@ -69,10 +69,6 @@
             padding: 40px;
         }
 
-        h1 {
-            margin-bottom: 10px;
-        }
-
         h2 {
             margin: 60px 0 15px;
             color: #374151;
@@ -160,7 +156,6 @@
             border-top: 3px solid #2563eb;
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin-right: 8px;
             vertical-align: middle;
         }
 
@@ -172,7 +167,7 @@
 
         .shell-btn {
             display: inline-block;
-            margin-top: 10px;
+            margin: 10px 0 20px;
             background: var(--shell-yellow);
             color: #000;
             padding: 10px 18px;
@@ -206,10 +201,13 @@
 
 <div class="container">
 
-<!-- ================= SECTION 1 ================= -->
+<!-- ================================================= -->
+<!-- APPLICATION SERVICE HEALTH (SEQUENTIAL) -->
+<!-- ================================================= -->
 
 <section id="app-health">
     <h2>Application Service Health</h2>
+
     <table>
         <thead>
             <tr>
@@ -227,7 +225,7 @@
                 <td class="status">
                     {% if loop.first %}
                     <span class="spinner"></span>
-                    <span class="checking">Checking...</span>
+                    <span class="checking"> Checking...</span>
                     {% else %}
                     —
                     {% endif %}
@@ -238,10 +236,13 @@
     </table>
 </section>
 
-<!-- ================= SECTION 2 ================= -->
+<!-- ================================================= -->
+<!-- INTEGRATION CONNECTIVITY (SEQUENTIAL) -->
+<!-- ================================================= -->
 
 <section id="integration-health">
     <h2>Integration Connectivity Status</h2>
+
     <table>
         <thead>
             <tr>
@@ -256,18 +257,15 @@
                 <th>Inbound</th>
             </tr>
         </thead>
-        <tbody>
+        <tbody id="integration-rows">
             {% for s in systems %}
-            <tr>
+            <tr id="integration-row-{{ loop.index0 }}"
+                class="{% if not loop.first %}hidden{% endif %}">
                 <td>{{ s.name }}</td>
-                <td class="{{ 'ok' if s.outbound else 'fail' }}">
-                    {{ '✔' if s.outbound else '✖' }}
-                </td>
-                <td class="{{ 'ok' if s.inbound else 'fail' }}">
-                    {{ '✔' if s.inbound else '✖' }}
-                </td>
-                <td>{{ s.tx_outbound }}</td>
-                <td>{{ s.tx_inbound }}</td>
+                <td class="outbound">—</td>
+                <td class="inbound">—</td>
+                <td>--</td>
+                <td>--</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -276,35 +274,74 @@
 
 </div>
 
-<!-- ================= SCRIPT ================= -->
+<!-- ================================================= -->
+<!-- JAVASCRIPT -->
+<!-- ================================================= -->
 
 <script>
-    const total = {{ services|length }};
-    let current = 0;
+    /* ================= APPLICATION SERVICE CHECK ================= */
 
-    async function runChecks() {
-        while (current < total) {
-            const row = document.getElementById(`row-${current}`);
+    const totalServices = {{ services|length }};
+    let currentService = 0;
+
+    async function runServiceChecks() {
+        while (currentService < totalServices) {
+            const row = document.getElementById(`row-${currentService}`);
             row.classList.remove("hidden");
 
             const statusCell = row.querySelector(".status");
             statusCell.innerHTML =
                 `<span class="spinner"></span>
-                 <span class="checking">Checking...</span>`;
+                 <span class="checking"> Checking...</span>`;
 
-            const res = await fetch(`/check/${current}`);
+            const res = await fetch(`/check/${currentService}`);
             const data = await res.json();
 
             statusCell.innerHTML = data.ok
                 ? `<span class="success">✔ ${data.message}</span>`
                 : `<span class="failure">✖ ${data.message}</span>`;
 
-            current++;
+            currentService++;
             await new Promise(r => setTimeout(r, 800));
         }
     }
 
-    runChecks();
+    /* ================= INTEGRATION CHECK ================= */
+
+    const totalIntegrations = {{ systems|length }};
+    let currentIntegration = 0;
+
+    async function runIntegrationChecks() {
+        while (currentIntegration < totalIntegrations) {
+            const row = document.getElementById(`integration-row-${currentIntegration}`);
+            row.classList.remove("hidden");
+
+            const outCell = row.querySelector(".outbound");
+            const inCell = row.querySelector(".inbound");
+
+            outCell.innerHTML = `<span class="spinner"></span>`;
+            inCell.innerHTML = `<span class="spinner"></span>`;
+
+            const res = await fetch(`/check-integration/${currentIntegration}`);
+            const data = await res.json();
+
+            outCell.innerHTML = data.outbound
+                ? `<span class="ok">✔</span>`
+                : `<span class="fail">✖</span>`;
+
+            inCell.innerHTML = data.inbound
+                ? `<span class="ok">✔</span>`
+                : `<span class="fail">✖</span>`;
+
+            currentIntegration++;
+            await new Promise(r => setTimeout(r, 800));
+        }
+    }
+
+    /* ================= START BOTH ================= */
+
+    runServiceChecks();
+    runIntegrationChecks();
 </script>
 
 </body>
