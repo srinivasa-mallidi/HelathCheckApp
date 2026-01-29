@@ -1,4 +1,4 @@
-from flask import Flask, render_template
+from flask import Flask, jsonify, render_template
 import requests
 import time
 
@@ -7,38 +7,33 @@ app = Flask(__name__)
 SERVICES = [
     {"name": "API Service", "url": "https://api.github.com"},
     {"name": "Local App", "url": "http://localhost:5000"},
-    {"name": "Example Down", "url": "http://localhost:9999"},
+    {"name": "Invalid Service", "url": "http://localhost:9999"}
 ]
 
-headers = {"User-Agent": "Mozilla/5.0"}
+HEADERS = {"User-Agent": "Mozilla/5.0"}
 
-def check_health(url):
+def check_service(service):
+    time.sleep(2)  # simulate real check
     try:
-        time.sleep(2)  # simulate real check delay
-        r = requests.get(url, timeout=5, headers=headers, verify=False)
-        return True, f"Healthy ({r.status_code})"
+        r = requests.get(service["url"], timeout=5, headers=HEADERS, verify=False)
+        return {
+            "ok": r.status_code == 200,
+            "message": f"Healthy ({r.status_code})"
+        }
     except Exception:
-        return False, "Unreachable"
+        return {
+            "ok": False,
+            "message": "Unreachable"
+        }
 
 @app.route("/")
 def index():
     return render_template("index.html", services=SERVICES)
 
-@app.route("/check/<int:idx>")
-def check(idx):
-    service = SERVICES[idx]
-    ok, message = check_health(service["url"])
-
-    next_idx = idx + 1 if idx + 1 < len(SERVICES) else None
-
-    return render_template(
-        "row.html",
-        service=service,
-        ok=ok,
-        message=message,
-        idx=idx,
-        next_idx=next_idx
-    )
+@app.route("/check/<int:index>")
+def check(index):
+    result = check_service(SERVICES[index])
+    return jsonify(result)
 
 if __name__ == "__main__":
     app.run(debug=True)

@@ -1,13 +1,12 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Application Health Monitor</title>
-    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <title>Application Service Health</title>
 
     <style>
         body {
-            font-family: system-ui;
             background: #0b1220;
+            font-family: system-ui;
             color: #e5e7eb;
             padding: 40px;
         }
@@ -17,8 +16,7 @@
         }
 
         table {
-            width: 100%;
-            max-width: 900px;
+            width: 900px;
             border-collapse: collapse;
             background: #020617;
             border-radius: 10px;
@@ -31,7 +29,6 @@
         }
 
         th {
-            background: #020617;
             color: #94a3b8;
             font-size: 13px;
             text-transform: uppercase;
@@ -42,36 +39,38 @@
             border-bottom: 1px solid #1e293b;
         }
 
-        tr:last-child {
-            border-bottom: none;
+        tr.hidden {
+            display: none;
         }
 
-        .status {
+        .checking {
+            color: #38bdf8;
+        }
+
+        .success {
+            color: #22c55e;
             font-weight: 600;
         }
 
-        .success { color: #22c55e; }
-        .failure { color: #ef4444; }
-        .checking { color: #38bdf8; }
+        .failure {
+            color: #ef4444;
+            font-weight: 600;
+        }
 
         .spinner {
-            width: 16px;
-            height: 16px;
+            display: inline-block;
+            width: 14px;
+            height: 14px;
             border: 3px solid #1e293b;
             border-top: 3px solid #38bdf8;
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            display: inline-block;
-            vertical-align: middle;
             margin-right: 8px;
+            vertical-align: middle;
         }
 
         @keyframes spin {
             to { transform: rotate(360deg); }
-        }
-
-        .hidden {
-            display: none;
         }
     </style>
 </head>
@@ -89,51 +88,51 @@
         </tr>
     </thead>
 
-   <tbody id="services">
-    {% for service in services %}
-    <tr id="row-{{ loop.index0 }}"
-        class="{% if not loop.first %}hidden{% endif %}">
-        <td>{{ service.name }}</td>
-        <td>{{ service.url }}</td>
-        <td class="status checking">
-            {% if loop.first %}
-            <span class="spinner"></span> Checking...
-            {% else %}
-            —
-            {% endif %}
-        </td>
-    </tr>
-    {% endfor %}
+    <tbody id="rows">
+        {% for s in services %}
+        <tr id="row-{{ loop.index0 }}"
+            class="{% if not loop.first %}hidden{% endif %}">
+            <td>{{ s.name }}</td>
+            <td>{{ s.url }}</td>
+            <td class="status">
+                {% if loop.first %}
+                <span class="spinner"></span>
+                <span class="checking">Checking...</span>
+                {% else %}
+                —
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
     </tbody>
-
-    <!-- start first check -->
-    <div hx-get="/check/0"
-        hx-trigger="load"
-        hx-swap="none">
-    </div>
-
 </table>
 
 <script>
-    let currentIndex = 0;
     const total = {{ services|length }};
+    let current = 0;
 
-    document.body.addEventListener("htmx:afterRequest", function () {
-        currentIndex++;
+    async function runChecks() {
+        while (current < total) {
+            const row = document.getElementById(`row-${current}`);
+            row.classList.remove("hidden");
 
-        if (currentIndex < total) {
-            document.getElementById("checker")
-                .setAttribute("hx-get", `/check/${currentIndex}`);
-            htmx.trigger("#checker", "check");
+            const statusCell = row.querySelector(".status");
+            statusCell.innerHTML = `<span class="spinner"></span><span class="checking">Checking...</span>`;
+
+            const res = await fetch(`/check/${current}`);
+            const data = await res.json();
+
+            statusCell.innerHTML = data.ok
+                ? `<span class="success">✔ ${data.message}</span>`
+                : `<span class="failure">✖ ${data.message}</span>`;
+
+            current++;
+            await new Promise(r => setTimeout(r, 800));
         }
-    });
-</script>
+    }
 
-<div id="checker"
-     hx-get="/check/0"
-     hx-trigger="load, check"
-     hx-swap="none">
-</div>
+    runChecks();
+</script>
 
 </body>
 </html>
