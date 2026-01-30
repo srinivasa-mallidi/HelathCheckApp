@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Shell | Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <style>
+        body {
+            margin: 0;
+            background: #f9fafb;
+            font-family: system-ui;
+        }
+
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 30px;
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .nav-left img {
+            height: 34px;
+        }
+
+        .nav-right a {
+            margin-left: 20px;
+            text-decoration: none;
+            font-weight: 500;
+            color: #111827;
+        }
+
+        .container {
+            padding: 30px;
+            max-width: 1200px;
+            margin: auto;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 6px 18px rgba(0,0,0,.05);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+            text-align: center;
+        }
+
+        th {
+            background: #f3f4f6;
+            font-size: 12px;
+        }
+
+        td:first-child {
+            text-align: left;
+        }
+
+        .spinner {
+            width: 14px;
+            height: 14px;
+            border: 3px solid #cbd5f5;
+            border-top: 3px solid #2563eb;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+
+        .ok { color: #16a34a; font-weight: bold; }
+        .fail { color: #dc2626; font-weight: bold; }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+
+<body>
+
+<div class="navbar">
+    <div class="nav-left">
+        <img src="https://upload.wikimedia.org/wikipedia/en/e/e8/Shell_logo.svg">
+        <strong>Monitoring Dashboard</strong>
+    </div>
+    <div class="nav-right">
+        <a href="/admin">Admin</a>
+        <a href="/audit">Audit</a>
+        <a href="/logout">Logout</a>
+    </div>
+</div>
+
+<div class="container">
+<div class="card">
+
+<h2>System Health</h2>
+
+<table>
+    <tr>
+        <th>System</th>
+        <th>Application</th>
+        <th>Outbound</th>
+        <th>Inbound</th>
+    </tr>
+
+    {% for s in systems %}
+    <tr id="row-{{ s.id }}">
+        <td>{{ s.name }}</td>
+        <td class="app"><span class="spinner"></span></td>
+        <td class="out"><span class="spinner"></span></td>
+        <td class="in"><span class="spinner"></span></td>
+    </tr>
+    {% endfor %}
+</table>
+
+</div>
+</div>
+
+<script>
+{% for s in systems %}
+fetch(`/check/{{ s.id }}/APPLICATION`).then(r=>r.json()).then(d=>{
+    document.querySelector("#row-{{ s.id }} .app").innerHTML =
+        d.ok ? "<span class='ok'>✔</span>" : "<span class='fail'>✖</span>";
+});
+fetch(`/check/{{ s.id }}/OUTBOUND`).then(r=>r.json()).then(d=>{
+    document.querySelector("#row-{{ s.id }} .out").innerHTML =
+        d.ok ? "<span class='ok'>✔</span>" : "<span class='fail'>✖</span>";
+});
+fetch(`/check/{{ s.id }}/INBOUND`).then(r=>r.json()).then(d=>{
+    document.querySelector("#row-{{ s.id }} .in").innerHTML =
+        d.ok ? "<span class='ok'>✔</span>" : "<span class='fail'>✖</span>";
+});
+{% endfor %}
+</script>
+
+</body>
+</html>

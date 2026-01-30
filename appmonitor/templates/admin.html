@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1>Administration</h1>
+
+<div class="card">
+    <h2>Add New System</h2>
+    <form method="post" class="form-grid">
+        <input name="name" placeholder="System Name" required>
+        <input name="environment" placeholder="Environment (QGC / PROD / TEST)" required>
+        <button class="btn primary">Add System</button>
+    </form>
+</div>
+
+<div class="card">
+    <h2>Configured Systems</h2>
+
+    <table class="styled-table">
+        <tr>
+            <th>Name</th>
+            <th>Environment</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+
+        {% for s in systems %}
+        <tr>
+            <td>{{ s.name }}</td>
+            <td>{{ s.environment }}</td>
+            <td>
+                <span class="status {{ 'success' if s.is_active else 'warning' }}">
+                    {{ 'Active' if s.is_active else 'Inactive' }}
+                </span>
+            </td>
+            <td>
+                <a class="btn small" href="/admin/system/{{ s.id }}/configure">Configure</a>
+
+                {% if s.is_active %}
+                    <a class="btn small danger"
+                    href="/admin/system/{{ s.id }}/inactivate"
+                    onclick="return confirm('Inactivate {{ s.name }}?')">
+                        Inactivate
+                    </a>
+                {% else %}
+                    <a class="btn small success"
+                    href="/admin/system/{{ s.id }}/activate"
+                    onclick="return confirm('Activate {{ s.name }}?')">
+                        Activate
+                    </a>
+                {% endif %}
+
+                <form method="post"
+                    action="/admin/system/{{ s.id }}/delete"
+                    style="display:inline"
+                    onsubmit="return confirmDelete(this)">
+                    <input type="hidden" name="note">
+                    <button class="btn small danger">Delete</button>
+                </form>
+            </td>
+
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+
+<script>
+function confirmDelete(form) {
+    const note = prompt("Reason for deletion (mandatory):");
+    if (!note) return false;
+    form.note.value = note;
+    return true;
+}
+</script>
+
+{% endblock %}
