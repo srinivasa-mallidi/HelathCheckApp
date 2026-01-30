@@ -3,11 +3,11 @@ from models import db, User
 from werkzeug.security import generate_password_hash
 
 with app.app_context():
-    db.drop_all()
-    db.create_all()
+    #db.drop_all()
+    #db.create_all()
 
     admin = User(
-        username="admin",
+        username="admin2",
         password_hash=generate_password_hash("admin123")
     )
 
