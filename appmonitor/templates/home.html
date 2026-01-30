@@ -131,9 +131,9 @@ Live monitoring of applications and integrations (sequential checks)
             </tr>
         </thead>
 
-        <tbody id="app-health">
-            {% for s in systems %}
-            <tr id="app-{{ s.id }}" class="{% if not loop.first %}hidden{% endif %}">
+        <tbody>
+            {% for s in application_systems %}
+            <tr id="app-{{ s.id }}" class="hidden">
                 <td>{{ s.name }}</td>
                 <td>{{ s.environment }}</td>
                 <td>
@@ -141,6 +141,10 @@ Live monitoring of applications and integrations (sequential checks)
                     <span class="muted">Checking...</span>
                 </td>
                 <td class="muted">Application endpoint</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" class="muted">No application monitors configured</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -167,12 +171,11 @@ Live monitoring of applications and integrations (sequential checks)
             </tr>
         </thead>
 
-        <tbody id="interface-health">
-            {% for s in systems %}
+        <tbody>
+            {% for s in interface_systems %}
             <tr id="if-{{ s.id }}" class="hidden">
                 <td>{{ s.name }}</td>
 
-                <!-- Connectivity -->
                 <td class="outbound-status">
                     <span class="spinner"></span>
                 </td>
@@ -181,9 +184,12 @@ Live monitoring of applications and integrations (sequential checks)
                     <span class="spinner"></span>
                 </td>
 
-                <!-- Transactions -->
                 <td class="outbound-txn muted">—</td>
                 <td class="inbound-txn muted">—</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" class="muted">No interface monitors configured</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -197,8 +203,14 @@ Systems are checked sequentially to avoid load and reflect real system state.
 <!-- ================= SEQUENTIAL CHECK SCRIPT ================= -->
 
 <script>
-const systems = [
-    {% for s in systems %}
+const applicationSystems = [
+    {% for s in application_systems %}
+    {{ s.id }}{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+
+const interfaceSystems = [
+    {% for s in interface_systems %}
     {{ s.id }}{% if not loop.last %},{% endif %}
     {% endfor %}
 ];
@@ -231,49 +243,36 @@ async function checkInterface(id) {
         const res = await fetch(`/health/interface/${id}`);
         const data = await res.json();
 
-        /* ---- OUTBOUND ---- */
         row.querySelector(".outbound-status").innerHTML =
-            data.outbound.reachable
-                ? "<span class='tick'>✔</span>"
-                : "<span class='cross'>✖</span>";
+            data.outbound.reachable ? "<span class='tick'>✔</span>" : "<span class='cross'>✖</span>";
 
         row.querySelector(".outbound-txn").innerText =
             `${data.outbound.total} (${data.outbound.failed} Failed)`;
 
-        /* ---- INBOUND ---- */
         row.querySelector(".inbound-status").innerHTML =
-            data.inbound.reachable
-                ? "<span class='tick'>✔</span>"
-                : "<span class='cross'>✖</span>";
+            data.inbound.reachable ? "<span class='tick'>✔</span>" : "<span class='cross'>✖</span>";
 
         row.querySelector(".inbound-txn").innerText =
             `${data.inbound.total} (${data.inbound.failed} Failed)`;
 
-    } catch (err) {
-        // If API itself fails
-        
-        row.querySelector(".outbound-status").innerHTML =
-            "<span class='cross'>-✖</span>";
-        row.querySelector(".inbound-status").innerHTML =
-            "<span class='cross'>-✖</span>";
-
-        row.querySelector(".outbound-txn").innerText = "-Error";
-        row.querySelector(".inbound-txn").innerText = "-Error";
+    } catch {
+        row.querySelector(".outbound-status").innerHTML = "<span class='cross'>✖</span>";
+        row.querySelector(".inbound-status").innerHTML = "<span class='cross'>✖</span>";
+        row.querySelector(".outbound-txn").innerText = "Error";
+        row.querySelector(".inbound-txn").innerText = "Error";
     }
 }
 
 async function runSequentialChecks() {
 
-    // Application checks first
-    for (const id of systems) {
+    for (const id of applicationSystems) {
         await checkApplication(id);
-        await wait(900);
+        await wait(800);
     }
 
-    // Interface checks next
-    for (const id of systems) {
+    for (const id of interfaceSystems) {
         await checkInterface(id);
-        await wait(900);
+        await wait(800);
     }
 }
 
