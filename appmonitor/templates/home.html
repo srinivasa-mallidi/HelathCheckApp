@@ -2,65 +2,39 @@
 {% block content %}
 
 <style>
-/* ===== ENTERPRISE UI ===== */
-
 .page-title {
-    font-size: 28px;
-    font-weight: 700;
+    font-size: 26px;
+    font-weight: 600;
     margin-bottom: 6px;
 }
 
 .subtitle {
     color: #6b7280;
-    margin-bottom: 30px;
+    margin-bottom: 24px;
 }
 
 .card {
     background: #ffffff;
-    border-radius: 14px;
-    padding: 24px;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.05);
-    margin-bottom: 40px;
+    border-radius: 12px;
+    padding: 22px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+    margin-bottom: 30px;
 }
 
-.card h2 {
-    font-size: 20px;
-    margin-bottom: 18px;
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 18px;
 }
 
-.styled-table {
-    width: 100%;
-    border-collapse: collapse;
+.metric {
+    font-size: 22px;
+    font-weight: 700;
 }
 
-.styled-table th {
-    background: #f9fafb;
-    color: #374151;
-    font-size: 13px;
-    text-transform: uppercase;
-    padding: 14px;
-    border-bottom: 1px solid #e5e7eb;
-    text-align: center;
-}
-
-.styled-table th:first-child,
-.styled-table td:first-child {
-    text-align: left;
-}
-
-.styled-table td {
-    padding: 14px;
-    border-bottom: 1px solid #e5e7eb;
-    font-size: 14px;
-    text-align: center;
-    vertical-align: middle;
-}
-
-.hidden {
-    display: none;
-}
-
-/* ===== STATUS ===== */
+.status-ok { color: #16a34a; }
+.status-fail { color: #dc2626; }
+.status-pending { color: #6b7280; }
 
 .spinner {
     width: 16px;
@@ -76,207 +50,200 @@
     to { transform: rotate(360deg); }
 }
 
-.status.ok {
-    color: #16a34a;
-    font-weight: 600;
+.table-wrap {
+    overflow-x: auto;
 }
 
-.status.fail {
-    color: #dc2626;
-    font-weight: 600;
+table {
+    width: 100%;
+    border-collapse: collapse;
 }
 
-.tick {
-    color: #16a34a;
-    font-size: 20px;
-    font-weight: 700;
+th {
+    background: #f9fafb;
+    font-size: 12px;
+    text-transform: uppercase;
+    padding: 12px;
+    border-bottom: 1px solid #e5e7eb;
+    text-align: left;
 }
 
-.cross {
-    color: #dc2626;
-    font-size: 20px;
-    font-weight: 700;
+td {
+    padding: 12px;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 14px;
 }
 
-.muted {
-    color: #6b7280;
-}
-
-.note {
-    font-size: 13px;
-    color: #6b7280;
-    margin-top: 10px;
-}
+.tick { color: #16a34a; font-weight: 700; }
+.cross { color: #dc2626; font-weight: 700; }
+.pending { color: #6b7280; }
 </style>
 
-<!-- ================= PAGE HEADER ================= -->
+<!-- ================= HEADER ================= -->
 
-<div class="page-title">Application & Interface Health</div>
+<div class="page-title">
+{{ app.name }} — {{ app.environment }}
+</div>
+
 <p class="subtitle">
-Live monitoring of applications and integrations (sequential checks)
+Live application & interface monitoring
 </p>
 
-<!-- ================= APPLICATION HEALTH ================= -->
+<!-- ================= APP METRICS ================= -->
 
 <div class="card">
-    <h2>Application Health</h2>
+<div class="grid">
 
-    <table class="styled-table">
-        <thead>
-            <tr>
-                <th>System</th>
-                <th>Environment</th>
-                <th>Status</th>
-                <th>Details</th>
-            </tr>
-        </thead>
-
-        <tbody>
-            {% for s in application_systems %}
-            <tr id="app-{{ s.id }}" class="hidden">
-                <td>{{ s.name }}</td>
-                <td>{{ s.environment }}</td>
-                <td>
-                    <span class="spinner"></span>
-                    <span class="muted">Checking...</span>
-                </td>
-                <td class="muted">Application endpoint</td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="4" class="muted">No application monitors configured</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<div>
+<div>Application Health</div>
+<div id="app-health" class="metric status-pending">
+<span class="spinner"></span>
+</div>
 </div>
 
-<!-- ================= INTERFACE HEALTH ================= -->
+<div>
+<div>Active Users</div>
+<div id="active-users" class="metric status-pending">
+—
+</div>
+</div>
+
+</div>
+</div>
+
+<!-- ================= INTERFACES ================= -->
 
 <div class="card">
-    <h2>Interface / Integration Health</h2>
 
-    <table class="styled-table">
-        <thead>
-            <tr>
-                <th rowspan="2">System</th>
-                <th colspan="2">Connectivity</th>
-                <th colspan="2">Transactions (Last 24h)</th>
-            </tr>
-            <tr>
-                <th>Outbound</th>
-                <th>Inbound</th>
-                <th>Outbound</th>
-                <th>Inbound</th>
-            </tr>
-        </thead>
+<h3 style="margin-bottom:16px;">Interfaces</h3>
 
-        <tbody>
-            {% for s in interface_systems %}
-            <tr id="if-{{ s.id }}" class="hidden">
-                <td>{{ s.name }}</td>
+<div class="table-wrap">
+<table>
 
-                <td class="outbound-status">
-                    <span class="spinner"></span>
-                </td>
+<thead>
+<tr>
+<th>Target System</th>
+<th>Direction</th>
+<th>Inbound</th>
+<th>Outbound</th>
+</tr>
+</thead>
 
-                <td class="inbound-status">
-                    <span class="spinner"></span>
-                </td>
+<tbody>
 
-                <td class="outbound-txn muted">—</td>
-                <td class="inbound-txn muted">—</td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="5" class="muted">No interface monitors configured</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+{% for i in interfaces %}
+<tr id="if-{{ i.id }}">
+
+<td>{{ i.target_system_name }}</td>
+<td>{{ i.direction }}</td>
+
+<td class="inbound pending">
+<span class="spinner"></span>
+</td>
+
+<td class="outbound pending">
+<span class="spinner"></span>
+</td>
+
+</tr>
+{% else %}
+<tr>
+<td colspan="4" class="pending">
+No interfaces configured
+</td>
+</tr>
+{% endfor %}
+
+</tbody>
+
+</table>
 </div>
 
-<p class="note">
-Systems are checked sequentially to avoid load and reflect real system state.
-</p>
+</div>
 
-<!-- ================= SEQUENTIAL CHECK SCRIPT ================= -->
+<!-- ================= JAVASCRIPT ================= -->
 
 <script>
-const applicationSystems = [
-    {% for s in application_systems %}
-    {{ s.id }}{% if not loop.last %},{% endif %}
-    {% endfor %}
-];
 
-const interfaceSystems = [
-    {% for s in interface_systems %}
-    {{ s.id }}{% if not loop.last %},{% endif %}
-    {% endfor %}
+const appId = {{ app.id }};
+const interfaces = [
+{% for i in interfaces %}
+{{ i.id }}{% if not loop.last %},{% endif %}
+{% endfor %}
 ];
 
 const wait = ms => new Promise(r => setTimeout(r, ms));
 
-async function checkApplication(id) {
-    const row = document.getElementById(`app-${id}`);
-    row.classList.remove("hidden");
+/* ===== APPLICATION HEALTH ===== */
 
-    const statusCell = row.children[2];
+async function checkApp() {
+    const health = document.getElementById("app-health");
+    const users = document.getElementById("active-users");
+
+    health.innerHTML = "<span class='spinner'></span>";
 
     try {
-        const res = await fetch(`/health/${id}`);
+        const res = await fetch(`/api/app-health/${appId}`);
         const data = await res.json();
 
-        statusCell.innerHTML = data.ok
-            ? "<span class='status ok'>✔ Healthy</span>"
-            : "<span class='status fail'>✖ Issues Detected</span>";
+        health.innerHTML = data.healthy
+            ? "<span class='status-ok'>✔ Healthy</span>"
+            : "<span class='status-fail'>✖ Down</span>";
+
+        users.innerHTML = data.active_users;
+
     } catch {
-        statusCell.innerHTML = "<span class='status fail'>✖ Unreachable</span>";
+        health.innerHTML = "<span class='status-fail'>✖ Error</span>";
+        users.innerHTML = "Error";
     }
 }
+
+/* ===== INTERFACE HEALTH ===== */
 
 async function checkInterface(id) {
     const row = document.getElementById(`if-${id}`);
-    row.classList.remove("hidden");
+
+    const inboundCell = row.querySelector(".inbound");
+    const outboundCell = row.querySelector(".outbound");
+
+    inboundCell.innerHTML = "<span class='spinner'></span>";
+    outboundCell.innerHTML = "<span class='spinner'></span>";
 
     try {
-        const res = await fetch(`/health/interface/${id}`);
+        const res = await fetch(`/api/interface-health/${id}`);
         const data = await res.json();
 
-        row.querySelector(".outbound-status").innerHTML =
-            data.outbound.reachable ? "<span class='tick'>✔</span>" : "<span class='cross'>✖</span>";
+        inboundCell.innerHTML = data.inbound
+            ? `${data.inbound.reachable ? "✔" : "✖"} ${data.inbound.total} (${data.inbound.failed})`
+            : "—";
 
-        row.querySelector(".outbound-txn").innerText =
-            `${data.outbound.total} (${data.outbound.failed} Failed)`;
-
-        row.querySelector(".inbound-status").innerHTML =
-            data.inbound.reachable ? "<span class='tick'>✔</span>" : "<span class='cross'>✖</span>";
-
-        row.querySelector(".inbound-txn").innerText =
-            `${data.inbound.total} (${data.inbound.failed} Failed)`;
+        outboundCell.innerHTML = data.outbound
+            ? `${data.outbound.reachable ? "✔" : "✖"} ${data.outbound.total} (${data.outbound.failed})`
+            : "—";
 
     } catch {
-        row.querySelector(".outbound-status").innerHTML = "<span class='cross'>✖</span>";
-        row.querySelector(".inbound-status").innerHTML = "<span class='cross'>✖</span>";
-        row.querySelector(".outbound-txn").innerText = "Error";
-        row.querySelector(".inbound-txn").innerText = "Error";
+        inboundCell.innerHTML = "Error";
+        outboundCell.innerHTML = "Error";
     }
 }
 
-async function runSequentialChecks() {
+/* ===== SEQUENTIAL LOADING ===== */
 
-    for (const id of applicationSystems) {
-        await checkApplication(id);
-        await wait(800);
-    }
+async function runSequential() {
+    await checkApp();
+    await wait(600);
 
-    for (const id of interfaceSystems) {
+    for (const id of interfaces) {
         await checkInterface(id);
-        await wait(800);
+        await wait(600);
     }
 }
 
-runSequentialChecks();
+/* ===== AUTO REFRESH ===== */
+
+runSequential();
+setInterval(runSequential, 5000);
+
 </script>
 
 {% endblock %}

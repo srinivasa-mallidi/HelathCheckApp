@@ -1,20 +1,27 @@
 from flask import (
-    Flask, render_template, redirect,
-    request, jsonify, session, url_for
+    Flask, render_template, redirect, request,
+    jsonify, session, url_for
 )
 from flask_login import (
-    LoginManager, login_user,
-    login_required, logout_user, current_user
+    LoginManager, login_user, login_required,
+    logout_user, current_user
 )
 from werkzeug.security import check_password_hash
-from datetime import datetime
 import requests
+import os
+
+from datetime import datetime
+
 
 from models import (
     db, User,
     Application, Interface, InterfaceEndpoint,
     AuditLog
 )
+
+# =====================================================
+# APP INIT
+# =====================================================
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "shell-secure-key"
@@ -33,10 +40,10 @@ def load_user(user_id):
 
 
 # =====================================================
-# HELPERS
+# COMMON HELPERS
 # =====================================================
 
-def audit(action, entity, old=None, new=None):
+def audit(action, entity, old=None, new=None, notes=None):
     if not current_user.is_authenticated:
         return
 
@@ -46,21 +53,28 @@ def audit(action, entity, old=None, new=None):
         entity=entity,
         old_value=str(old) if old else "",
         new_value=str(new) if new else "",
-        timestamp=datetime.utcnow()
+        notes=notes or ""
     )
     db.session.add(log)
     db.session.commit()
 
 
 def check_url(url):
+    """Generic URL health check"""
     try:
-        r = requests.get(url, timeout=5, verify=False)
+        r = requests.get(
+            url,
+            timeout=5,
+            verify=False,
+            headers={"User-Agent": "Monitoring-Portal"}
+        )
         return r.status_code < 400
     except Exception:
         return False
 
 
 def fetch_number(url):
+    """Fetch numeric metric from API"""
     try:
         r = requests.get(url, timeout=5, verify=False)
         return int(r.text.strip())
@@ -78,7 +92,7 @@ def select_application():
 
     if request.method == "POST":
         session["selected_app_id"] = int(request.form["application_id"])
-        return redirect("/home")
+        return redirect(url_for("home"))
 
     return render_template("select_app.html", applications=apps)
 
@@ -86,7 +100,7 @@ def select_application():
 @app.route("/change-app")
 def change_app():
     session.pop("selected_app_id", None)
-    return redirect("/")
+    return redirect(url_for("select_application"))
 
 
 # =====================================================
@@ -97,7 +111,7 @@ def change_app():
 def home():
     app_id = session.get("selected_app_id")
     if not app_id:
-        return redirect("/")
+        return redirect(url_for("select_application"))
 
     app_obj = Application.query.get_or_404(app_id)
 
@@ -106,31 +120,42 @@ def home():
         is_active=True
     ).all()
 
-    return render_template("home.html", app=app_obj, interfaces=interfaces)
+    return render_template(
+        "home.html",
+        app=app_obj,
+        interfaces=interfaces
+    )
 
 
 # =====================================================
-# AJAX APIs
+# DASHBOARD APIs (AJAX)
 # =====================================================
 
 @app.route("/api/app-health/<int:app_id>")
 def api_app_health(app_id):
     app_obj = Application.query.get_or_404(app_id)
 
+    ok = check_url(app_obj.app_health_url)
+    users = fetch_number(app_obj.active_users_url)
+
     return jsonify({
-        "healthy": check_url(app_obj.app_health_url),
-        "active_users": fetch_number(app_obj.active_users_url)
+        "healthy": ok,
+        "active_users": users
     })
 
 
 @app.route("/api/interface-health/<int:interface_id>")
 def api_interface_health(interface_id):
+    interface = Interface.query.get_or_404(interface_id)
+
     endpoints = InterfaceEndpoint.query.filter_by(
-        interface_id=interface_id,
-        is_active=True
+        interface_id=interface_id
     ).all()
 
-    result = {"inbound": None, "outbound": None}
+    result = {
+        "inbound": None,
+        "outbound": None
+    }
 
     for ep in endpoints:
         data = {
@@ -138,7 +163,11 @@ def api_interface_health(interface_id):
             "total": fetch_number(ep.transaction_count_url),
             "failed": fetch_number(ep.error_count_url)
         }
-        result[ep.direction.lower()] = data
+
+        if ep.direction == "INBOUND":
+            result["inbound"] = data
+        elif ep.direction == "OUTBOUND":
+            result["outbound"] = data
 
     return jsonify(result)
 
@@ -171,7 +200,7 @@ def logout():
 
 
 # =====================================================
-# ADMIN
+# ADMIN – APPLICATIONS
 # =====================================================
 
 @app.route("/admin")
@@ -188,8 +217,7 @@ def add_application():
         name=request.form["name"],
         environment=request.form["environment"],
         app_health_url=request.form["health_url"],
-        active_users_url=request.form["users_url"],
-        is_active=True
+        active_users_url=request.form["users_url"]
     )
     db.session.add(app_obj)
     db.session.commit()
@@ -198,135 +226,139 @@ def add_application():
     return redirect("/admin")
 
 
+# =====================================================
+# ADMIN – INTERFACES
+# =====================================================
+
+@app.route("/admin/interface/add", methods=["POST"])
+@login_required
+class Interface(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+
+    source_app_id = db.Column(
+        db.Integer,
+        db.ForeignKey("application.id"),
+        nullable=False
+    )
+
+    target_app_name = db.Column(
+        db.String(120),
+        nullable=False
+    )
+
+    direction = db.Column(
+        db.String(20),  # INBOUND / OUTBOUND / BOTH
+        nullable=False
+    )
+
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+
+
+
 @app.route("/admin/application/<int:app_id>/edit", methods=["GET", "POST"])
 @login_required
 def edit_application(app_id):
     app_obj = Application.query.get_or_404(app_id)
 
     if request.method == "POST":
+        old = {
+            "name": app_obj.name,
+            "environment": app_obj.environment,
+            "health_url": app_obj.app_health_url,
+            "users_url": app_obj.active_users_url
+        }
+
         app_obj.name = request.form["name"]
         app_obj.environment = request.form["environment"]
         app_obj.app_health_url = request.form["health_url"]
         app_obj.active_users_url = request.form["users_url"]
+
         db.session.commit()
 
-        audit("UPDATE", "Application", app_id, app_obj.name)
+        audit(
+            action="UPDATE",
+            entity="Application",
+            old=old,
+            new={
+                "name": app_obj.name,
+                "environment": app_obj.environment
+            }
+        )
+
         return redirect("/admin")
 
-    return render_template("application_form.html", application=app_obj)
+    return render_template(
+        "application_form.html",
+        application=app_obj,
+        mode="edit"
+    )
 
-
-@app.route("/admin/application/<int:app_id>/activate")
+@app.route("/admin/application/<int:app_id>/interfaces")
 @login_required
-def activate_application(app_id):
+def application_interfaces(app_id):
     app_obj = Application.query.get_or_404(app_id)
-    app_obj.is_active = True
-    db.session.commit()
-    return redirect("/admin")
 
+    interfaces = Interface.query.filter(
+        (Interface.source_app_id == app_id) |
+        (Interface.target_app_id == app_id)
+    ).all()
 
-@app.route("/admin/application/<int:app_id>/deactivate")
-@login_required
-def deactivate_application(app_id):
-    app_obj = Application.query.get_or_404(app_id)
-    app_obj.is_active = False
-    db.session.commit()
-    return redirect("/admin")
-
-
-# =====================================================
-# INTERFACES
-# =====================================================
-
-@app.route("/admin/application/<int:app_id>/interfaces", methods=["GET", "POST"])
-@login_required
-def manage_interfaces(app_id):
-    application = Application.query.get_or_404(app_id)
-
-    if request.method == "POST":
-        interface = Interface(
-            source_app_id=app_id,
-            target_system_name=request.form["target_system_name"],
-            direction=request.form["direction"],
-            is_active=True
-        )
-        db.session.add(interface)
-        db.session.commit()
-
-        return redirect(url_for("manage_interfaces", app_id=app_id))
-
-    interfaces = Interface.query.filter_by(source_app_id=app_id).all()
+    applications = Application.query.filter_by(is_active=True).all()
 
     return render_template(
         "interface_form.html",
-        application=application,
+        application=app_obj,
+        interfaces=interfaces,
+        applications=applications
+    )
+
+
+# ==========================
+# INTERFACE MANAGEMENT
+# ==========================
+
+@app.route("/admin/application/<int:app_id>/interfaces", methods=["GET"])
+@login_required
+def interface_form(app_id):
+    app_obj = Application.query.get_or_404(app_id)
+
+    interfaces = Interface.query.filter_by(
+        source_app_id=app_id
+    ).all()
+
+    return render_template(
+        "interface_form.html",
+        app=app_obj,
         interfaces=interfaces
     )
 
 
-# =====================================================
-# INTERFACE ENDPOINTS (FIXED)
-# =====================================================
-
-@app.route("/admin/interface/<int:interface_id>/endpoints", methods=["GET", "POST"])
+@app.route("/admin/application/<int:app_id>/interfaces", methods=["POST"])
 @login_required
-def interface_endpoints(interface_id):
-    interface = Interface.query.get_or_404(interface_id)
-
-    if request.method == "POST":
-        direction = request.form["direction"]
-
-        endpoint = InterfaceEndpoint.query.filter_by(
-            interface_id=interface_id,
-            direction=direction
-        ).first()
-
-        if endpoint:
-            endpoint.connectivity_url = request.form["connectivity_url"]
-            endpoint.transaction_count_url = request.form["transaction_count_url"]
-            endpoint.error_count_url = request.form["error_count_url"]
-        else:
-            endpoint = InterfaceEndpoint(
-                interface_id=interface_id,
-                direction=direction,
-                connectivity_url=request.form["connectivity_url"],
-                transaction_count_url=request.form["transaction_count_url"],
-                error_count_url=request.form["error_count_url"],
-                is_active=True
-            )
-            db.session.add(endpoint)
-
-        db.session.commit()
-
-        return redirect(url_for("interface_endpoints", interface_id=interface_id))
-
-    inbound = InterfaceEndpoint.query.filter_by(
-        interface_id=interface_id,
-        direction="INBOUND"
-    ).first()
-
-    outbound = InterfaceEndpoint.query.filter_by(
-        interface_id=interface_id,
-        direction="OUTBOUND"
-    ).first()
-
-    return render_template(
-        "interface_endpoints.html",
-        interface=interface,
-        inbound=inbound,
-        outbound=outbound
+def create_interface(app_id):
+    interface = Interface(
+        source_app_id=app_id,
+        target_app_name=request.form["target_app_name"],
+        direction=request.form["direction"]
     )
 
+    db.session.add(interface)
+    db.session.commit()
 
-# =====================================================
-# AUDIT PAGE
-# =====================================================
+    audit(
+        "CREATE",
+        "Interface",
+        None,
+        f"{interface.target_app_name} ({interface.direction})"
+    )
 
-@app.route("/audit")
-@login_required
-def audit_page():
-    logs = AuditLog.query.order_by(AuditLog.timestamp.desc()).all()
-    return render_template("audit.html", logs=logs)
+    return redirect(
+        url_for("interface_form", app_id=app_id)
+    )
+
 
 
 # =====================================================

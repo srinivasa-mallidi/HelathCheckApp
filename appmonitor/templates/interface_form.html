@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+.page-title {
+    font-size: 26px;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.subtitle {
+    color: #6b7280;
+    margin-bottom: 24px;
+}
+
+.card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 22px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+    margin-bottom: 30px;
+    max-width: 920px;
+}
+
+.card h2 {
+    font-size: 18px;
+    margin-bottom: 16px;
+    font-weight: 600;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+}
+
+label {
+    font-size: 13px;
+    color: #374151;
+    font-weight: 600;
+}
+
+input, select {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    font-size: 14px;
+    width: 100%;
+}
+
+input:focus, select:focus {
+    outline: none;
+    border-color: #facc15;
+}
+
+input[disabled] {
+    background: #f9fafb;
+    color: #6b7280;
+}
+
+.form-help {
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 4px;
+}
+
+.actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 22px;
+}
+
+.btn-primary {
+    background: #facc15;
+    color: #000;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-secondary {
+    background: #e5e7eb;
+    color: #000;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    border: none;
+    text-decoration: none;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.table th,
+.table td {
+    padding: 10px;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 14px;
+}
+
+.link {
+    color: #2563eb;
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.link:hover {
+    text-decoration: underline;
+}
+</style>
+
+<!-- HEADER -->
+
+<div class="page-title">
+    Interfaces
+</div>
+
+<p class="subtitle">
+    Define integration relationship for
+    <strong>{{ application.name }}</strong>
+    ({{ application.environment }})
+</p>
+
+<!-- ADD INTERFACE -->
+
+<div class="card">
+<h2>Add Interface</h2>
+
+<form method="post"
+      action="{{ url_for('manage_interfaces', app_id=application.id) }}">
+
+<div class="form-grid">
+
+<div>
+<label>Source Application</label>
+<input type="text"
+       value="{{ application.name }} ({{ application.environment }})"
+       disabled>
+<div class="form-help">
+Application initiating the integration
+</div>
+</div>
+
+<div>
+<label>Target System</label>
+<input name="target_system_name"
+       placeholder="SAP / Primavera / External API"
+       required>
+<div class="form-help">
+External or internal system receiving data
+</div>
+</div>
+
+<div>
+<label>Interface Direction</label>
+<select name="direction" required>
+<option value="INBOUND">Inbound</option>
+<option value="OUTBOUND">Outbound</option>
+<option value="BOTH">Both</option>
+</select>
+<div class="form-help">
+Direction of data flow
+</div>
+</div>
+
+</div>
+
+<div class="actions">
+<button class="btn-primary">Create Interface</button>
+
+<a href="/admin" class="btn-secondary">
+Back
+</a>
+</div>
+
+</form>
+</div>
+
+<!-- EXISTING INTERFACES -->
+
+<div class="card">
+<h2>Existing Interfaces</h2>
+
+<table class="table">
+<tr>
+<th>Target</th>
+<th>Direction</th>
+<th>Status</th>
+<th>Endpoints</th>
+</tr>
+
+{% for i in interfaces %}
+<tr>
+<td>{{ i.target_system_name }}</td>
+<td>{{ i.direction }}</td>
+<td>{{ "Active" if i.is_active else "Inactive" }}</td>
+<td>
+<a class="link"
+href="{{ url_for('interface_endpoints', interface_id=i.id) }}">
+Configure
+</a>
+</td>
+</tr>
+{% else %}
+<tr>
+<td colspan="4" style="color:#6b7280;">
+No interfaces configured
+</td>
+</tr>
+{% endfor %}
+</table>
+</div>
+
+{% endblock %}

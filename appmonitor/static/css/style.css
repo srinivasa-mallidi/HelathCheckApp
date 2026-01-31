@@ -1,0 +1,86 @@
+body {
+    margin: 0;
+    font-family: system-ui, Arial, sans-serif;
+    background: #f5f7fa;
+}
+
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    padding: 14px 24px;
+    background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.navbar a {
+    margin-left: 18px;
+    text-decoration: none;
+    color: #1f2937;
+    font-weight: 500;
+}
+
+.navbar a.danger {
+    color: #dc2626;
+}
+
+.container {
+    padding: 24px;
+    max-width: 1200px;
+    margin: auto;
+}
+
+.card {
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 14px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.06);
+    margin-bottom: 30px;
+}
+
+.center {
+    max-width: 420px;
+    margin: 60px auto;
+}
+
+.styled-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.styled-table th,
+.styled-table td {
+    padding: 14px;
+    border-bottom: 1px solid #e5e7eb;
+    text-align: left;
+}
+
+.styled-table th {
+    background: #f9fafb;
+    font-size: 13px;
+    text-transform: uppercase;
+}
+
+.btn {
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.btn.primary {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+.btn.small {
+    background: #e5e7eb;
+}
+
+input, select {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 12px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+}

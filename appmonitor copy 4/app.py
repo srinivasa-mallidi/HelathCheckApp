@@ -16,6 +16,10 @@ from models import (
     AuditLog
 )
 
+# =====================================================
+# APP INITIALIZATION
+# =====================================================
+
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "shell-secure-key"
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///monitor.db"
@@ -106,7 +110,11 @@ def home():
         is_active=True
     ).all()
 
-    return render_template("home.html", app=app_obj, interfaces=interfaces)
+    return render_template(
+        "home.html",
+        app=app_obj,
+        interfaces=interfaces
+    )
 
 
 # =====================================================
@@ -138,6 +146,7 @@ def api_interface_health(interface_id):
             "total": fetch_number(ep.transaction_count_url),
             "failed": fetch_number(ep.error_count_url)
         }
+
         result[ep.direction.lower()] = data
 
     return jsonify(result)
@@ -171,7 +180,7 @@ def logout():
 
 
 # =====================================================
-# ADMIN
+# ADMIN – APPLICATION MANAGEMENT
 # =====================================================
 
 @app.route("/admin")
@@ -196,24 +205,6 @@ def add_application():
 
     audit("CREATE", "Application", None, app_obj.name)
     return redirect("/admin")
-
-
-@app.route("/admin/application/<int:app_id>/edit", methods=["GET", "POST"])
-@login_required
-def edit_application(app_id):
-    app_obj = Application.query.get_or_404(app_id)
-
-    if request.method == "POST":
-        app_obj.name = request.form["name"]
-        app_obj.environment = request.form["environment"]
-        app_obj.app_health_url = request.form["health_url"]
-        app_obj.active_users_url = request.form["users_url"]
-        db.session.commit()
-
-        audit("UPDATE", "Application", app_id, app_obj.name)
-        return redirect("/admin")
-
-    return render_template("application_form.html", application=app_obj)
 
 
 @app.route("/admin/application/<int:app_id>/activate")
@@ -255,7 +246,9 @@ def manage_interfaces(app_id):
 
         return redirect(url_for("manage_interfaces", app_id=app_id))
 
-    interfaces = Interface.query.filter_by(source_app_id=app_id).all()
+    interfaces = Interface.query.filter_by(
+        source_app_id=app_id
+    ).all()
 
     return render_template(
         "interface_form.html",
@@ -265,7 +258,7 @@ def manage_interfaces(app_id):
 
 
 # =====================================================
-# INTERFACE ENDPOINTS (FIXED)
+# INTERFACE ENDPOINTS
 # =====================================================
 
 @app.route("/admin/interface/<int:interface_id>/endpoints", methods=["GET", "POST"])
@@ -274,59 +267,32 @@ def interface_endpoints(interface_id):
     interface = Interface.query.get_or_404(interface_id)
 
     if request.method == "POST":
-        direction = request.form["direction"]
-
-        endpoint = InterfaceEndpoint.query.filter_by(
+        endpoint = InterfaceEndpoint(
             interface_id=interface_id,
-            direction=direction
-        ).first()
+            direction=request.form["direction"],
+            connectivity_url=request.form["connectivity_url"],
+            transaction_count_url=request.form["transaction_count_url"],
+            error_count_url=request.form["error_count_url"],
+            is_active=True
+        )
 
-        if endpoint:
-            endpoint.connectivity_url = request.form["connectivity_url"]
-            endpoint.transaction_count_url = request.form["transaction_count_url"]
-            endpoint.error_count_url = request.form["error_count_url"]
-        else:
-            endpoint = InterfaceEndpoint(
-                interface_id=interface_id,
-                direction=direction,
-                connectivity_url=request.form["connectivity_url"],
-                transaction_count_url=request.form["transaction_count_url"],
-                error_count_url=request.form["error_count_url"],
-                is_active=True
-            )
-            db.session.add(endpoint)
-
+        db.session.add(endpoint)
         db.session.commit()
 
-        return redirect(url_for("interface_endpoints", interface_id=interface_id))
+        return redirect(url_for(
+            "interface_endpoints",
+            interface_id=interface_id
+        ))
 
-    inbound = InterfaceEndpoint.query.filter_by(
-        interface_id=interface_id,
-        direction="INBOUND"
-    ).first()
-
-    outbound = InterfaceEndpoint.query.filter_by(
-        interface_id=interface_id,
-        direction="OUTBOUND"
-    ).first()
+    endpoints = InterfaceEndpoint.query.filter_by(
+        interface_id=interface_id
+    ).all()
 
     return render_template(
         "interface_endpoints.html",
         interface=interface,
-        inbound=inbound,
-        outbound=outbound
+        endpoints=endpoints
     )
-
-
-# =====================================================
-# AUDIT PAGE
-# =====================================================
-
-@app.route("/audit")
-@login_required
-def audit_page():
-    logs = AuditLog.query.order_by(AuditLog.timestamp.desc()).all()
-    return render_template("audit.html", logs=logs)
 
 
 # =====================================================
