@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Enterprise Monitoring Portal</title>
+    <title>Maximo Monitoring Portal</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <style>
@@ -122,7 +122,7 @@
 
     <div class="brand">
        <!-- <span class="brand-badge">Shell</span>-->
-        Monitoring Portal
+        Maximo Monitoring Portal
     </div>
 
     <div class="nav-links">
@@ -131,7 +131,7 @@
 
         {% if current_user.is_authenticated %}
             <a class="nav-link" href="/admin">Admin</a>
-            <a class="nav-link" href="/audit">Audit</a>
+            <!--<a class="nav-link" href="/audit">Audit</a>-->
             <a class="nav-btn secondary" href="/logout">Logout</a>
         {% else %}
             <a class="nav-btn" href="/login">Admin Login</a>
@@ -148,7 +148,7 @@
 <!-- ================= FOOTER ================= -->
 
 <div class="footer">
-    © {{ 2026 }} Enterprise Monitoring Portal · Internal Use Only
+    © {{ 2026 }} Maximo Monitoring Portal · Internal Use Only
 </div>
 
 </body>

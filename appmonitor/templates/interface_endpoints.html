@@ -98,8 +98,8 @@ input:focus {
 
 <p class="subtitle">
 Interface between
-<strong>{{ interface.source_application.name }}</strong>
-→ <strong>{{ interface.target_system_name }}</strong>
+<strong>{{ interface.source_application.name }} </strong>
+&amp; <strong>{{ interface.target_system_name }}</strong>
 </p>
 
 <!-- ================= INBOUND ================= -->
@@ -117,7 +117,7 @@ Interface between
 <label>Inbound Connectivity URL</label>
 <input name="connectivity_url"
        value="{{ inbound.connectivity_url if inbound }}"
-       placeholder="https://api.target.com/health"
+       placeholder=""
        required>
 <div class="form-help">
 API availability check
@@ -128,7 +128,7 @@ API availability check
 <label>Inbound Transaction Count URL</label>
 <input name="transaction_count_url"
        value="{{ inbound.transaction_count_url if inbound }}"
-       placeholder="https://api.target.com/metrics/total"
+       placeholder=""
        required>
 <div class="form-help">
 Total inbound transactions
@@ -139,7 +139,7 @@ Total inbound transactions
 <label>Inbound Error Count URL</label>
 <input name="error_count_url"
        value="{{ inbound.error_count_url if inbound }}"
-       placeholder="https://api.target.com/metrics/errors"
+       placeholder=""
        required>
 <div class="form-help">
 Failed inbound transactions
@@ -175,7 +175,7 @@ Back
 <label>Outbound Connectivity URL</label>
 <input name="connectivity_url"
        value="{{ outbound.connectivity_url if outbound }}"
-       placeholder="https://api.source.com/health"
+       placeholder=""
        required>
 <div class="form-help">
 API availability check
@@ -186,7 +186,7 @@ API availability check
 <label>Outbound Transaction Count URL</label>
 <input name="transaction_count_url"
        value="{{ outbound.transaction_count_url if outbound }}"
-       placeholder="https://api.source.com/metrics/total"
+       placeholder=""
        required>
 <div class="form-help">
 Total outbound transactions
@@ -197,7 +197,7 @@ Total outbound transactions
 <label>Outbound Error Count URL</label>
 <input name="error_count_url"
        value="{{ outbound.error_count_url if outbound }}"
-       placeholder="https://api.source.com/metrics/errors"
+       placeholder=""
        required>
 <div class="form-help">
 Failed outbound transactions

@@ -123,7 +123,7 @@ input[disabled] {
 <p class="subtitle">
     Define integration relationship for
     <strong>{{ application.name }}</strong>
-    ({{ application.environment }})
+     ({{ application.environment }})
 </p>
 
 <!-- ADD INTERFACE -->
@@ -137,23 +137,17 @@ input[disabled] {
 <div class="form-grid">
 
 <div>
-<label>Source Application</label>
+<label>Application</label>
 <input type="text"
        value="{{ application.name }} ({{ application.environment }})"
        disabled>
-<div class="form-help">
-Application initiating the integration
-</div>
 </div>
 
 <div>
-<label>Target System</label>
+<label>External System</label>
 <input name="target_system_name"
-       placeholder="SAP / Primavera / External API"
+       placeholder=""
        required>
-<div class="form-help">
-External or internal system receiving data
-</div>
 </div>
 
 <div>
@@ -161,7 +155,7 @@ External or internal system receiving data
 <select name="direction" required>
 <option value="INBOUND">Inbound</option>
 <option value="OUTBOUND">Outbound</option>
-<option value="BOTH">Both</option>
+<option value="BOTH">Both Inbound & Outbound</option>
 </select>
 <div class="form-help">
 Direction of data flow

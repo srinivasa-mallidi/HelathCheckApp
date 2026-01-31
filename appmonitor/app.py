@@ -322,11 +322,11 @@ def interface_endpoints(interface_id):
 # AUDIT PAGE
 # =====================================================
 
-@app.route("/audit")
-@login_required
-def audit_page():
-    logs = AuditLog.query.order_by(AuditLog.timestamp.desc()).all()
-    return render_template("audit.html", logs=logs)
+#@app.route("/audit")
+#@login_required
+#def audit_page():
+#    logs = AuditLog.query.order_by(AuditLog.timestamp.desc()).all()
+#    return render_template("audit.html", logs=logs)
 
 
 # =====================================================
