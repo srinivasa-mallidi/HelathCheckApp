@@ -77,6 +77,33 @@ td {
 .tick { color: #16a34a; font-weight: 700; }
 .cross { color: #dc2626; font-weight: 700; }
 .pending { color: #6b7280; }
+
+.ok { color: #16a34a; font-weight: 700; }
+.fail { color: #dc2626; font-weight: 700; }
+.muted { color: #6b7280; font-style: italic; }
+
+.fail-count { color: #dc2626; font-weight: 600; }
+.zero-count { color: #6b7280; }
+
+.tooltip {
+    position: relative;
+    cursor: help;
+}
+
+.tooltip:hover::after {
+    content: attr(data-tip);
+    position: absolute;
+    left: 0;
+    top: 120%;
+    background: #111827;
+    color: #fff;
+    padding: 6px 10px;
+    font-size: 12px;
+    border-radius: 6px;
+    white-space: nowrap;
+    z-index: 20;
+}
+
 </style>
 
 <!-- ================= HEADER ================= -->
@@ -202,7 +229,6 @@ async function checkApp() {
 
 async function checkInterface(id) {
     const row = document.getElementById(`if-${id}`);
-
     const inboundCell = row.querySelector(".inbound");
     const outboundCell = row.querySelector(".outbound");
 
@@ -213,17 +239,41 @@ async function checkInterface(id) {
         const res = await fetch(`/api/interface-health/${id}`);
         const data = await res.json();
 
-        inboundCell.innerHTML = data.inbound
-            ? `${data.inbound.reachable ? "✔" : "✖"} ${data.inbound.total} (${data.inbound.failed})`
-            : "—";
+        // ---------- INBOUND ----------
+        if (!data.inbound) {
+            inboundCell.innerHTML = "<span class='muted'>Not configured</span>";
+        } else {
+            const ok = data.inbound.reachable;
+            const failed = data.inbound.failed;
+            const failedClass = failed > 0 ? "fail-count" : "zero-count";
 
-        outboundCell.innerHTML = data.outbound
-            ? `${data.outbound.reachable ? "✔" : "✖"} ${data.outbound.total} (${data.outbound.failed})`
-            : "—";
+            inboundCell.innerHTML = `
+                <span class="tooltip ${ok ? "ok" : "fail"}"
+                      data-tip="${data.inbound.total} transactions, ${failed} failed">
+                    ${ok ? "✔" : "✖"} ${data.inbound.total}
+                    <span class="${failedClass}">(${failed})</span>
+                </span>`;
+        }
+
+        // ---------- OUTBOUND ----------
+        if (!data.outbound) {
+            outboundCell.innerHTML = "<span class='muted'>Not configured</span>";
+        } else {
+            const ok = data.outbound.reachable;
+            const failed = data.outbound.failed;
+            const failedClass = failed > 0 ? "fail-count" : "zero-count";
+
+            outboundCell.innerHTML = `
+                <span class="tooltip ${ok ? "ok" : "fail"}"
+                      data-tip="${data.outbound.total} transactions, ${failed} failed">
+                    ${ok ? "✔" : "✖"} ${data.outbound.total}
+                    <span class="${failedClass}">(${failed})</span>
+                </span>`;
+        }
 
     } catch {
-        inboundCell.innerHTML = "Error";
-        outboundCell.innerHTML = "Error";
+        inboundCell.innerHTML = "<span class='fail'>Error</span>";
+        outboundCell.innerHTML = "<span class='fail'>Error</span>";
     }
 }
 
